@@ -223,14 +223,29 @@ impl<'a> PipelineBuilder<'a> {
             }),
         );
 
-        let encoder = Encoder::RngX264;
-        tracing::info!(module = "capture::encoder", "Encoder: {:?}", encoder);
+        // x264enc is only available when gst-plugins-ugly is installed, which the
+        // official GStreamer Windows installers skip. Fall back to openh264enc so
+        // the capture pipeline can still be built.
+        let encoder_kind = if gst::ElementFactory::find("x264enc").is_some() {
+            Encoder::RngX264
+        } else {
+            tracing::warn!(
+                module = "capture::encoder",
+                "x264enc is not available, falling back to openh264enc"
+            );
+            Encoder::OpenH264
+        };
+        tracing::info!(module = "capture::encoder", "Encoder: {:?}", encoder_kind);
 
-        let encoder = encoder.build()?;
+        let encoder = encoder_kind.build()?;
 
         let encoder_caps = gst_video::VideoCapsBuilder::for_encoding("video/x-h264")
             // 10% chance of high-4:4:4 profile this will mean almost 100% color fidelity
-            .field_if("profile", "high-4:4:4", rand::rng().random_bool(0.1))
+            .field_if(
+                "profile",
+                "high-4:4:4",
+                encoder_kind.supports_444_profile() && rand::rng().random_bool(0.1),
+            )
             .build();
 
         let encoder_caps = gst::ElementFactory::make("capsfilter")
@@ -496,6 +511,10 @@ enum Encoder {
     AmfH264,
     X264,
     RngX264,
+    /// `x264enc` lives in gst-plugins-ugly, which the official GStreamer Windows
+    /// installers no longer ship. `openh264enc` ships with the runtime package, so
+    /// use it as a fallback when x264 is unavailable.
+    OpenH264,
 }
 
 impl Encoder {
@@ -524,7 +543,22 @@ impl Encoder {
                     .property("bitrate", 4096_u32)
                     .property_from_str("psy-tune", "film")
             }
+            // openh264enc takes its quality bounds as qp-min/qp-max and expects the
+            // bitrate in bits per second (x264enc uses kbit/s).
+            Encoder::OpenH264 => {
+                let rng = rand::rng().random_range(14u32..=18);
+                gst::ElementFactory::make("openh264enc")
+                    .property("qp-min", rng)
+                    .property("qp-max", rng + 4)
+                    .property("bitrate", 4096_u32 * 1000)
+                    .property_from_str("rate-control", "quality")
+            }
         }
+    }
+
+    /// openh264 only encodes 4:2:0, so it cannot negotiate a high-4:4:4 profile.
+    fn supports_444_profile(self) -> bool {
+        !matches!(self, Encoder::OpenH264)
     }
 
     fn build(self) -> Result<gst::Element, gst::glib::BoolError> {
