@@ -1,0 +1,14 @@
+[package]
+name = "iced_fonts"
+version = "0.1.0"
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+iced_widget.workspace = true
+iced_core.workspace = true
+
+[lints]
+workspace = true

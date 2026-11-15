@@ -1,0 +1,339 @@
+syntax = "proto3";
+
+package elefant.training_data.video_annotation;
+
+import "shared.proto";
+
+message VideoAnnotationEnv {
+  string env = 1;         // e.g. "minecraft"
+  string env_subtype = 2; // e.g. "web-annotations" or "user-screen"
+  string env_version = 3; // e.g. "1.20.1"
+}
+
+message CaptureDeviceSpecs {
+  // Version 4: randomized compression quality
+  // Version 5: use device events instead of rdev for keyboard capture
+  int32 recap_version = 6; // e.g. 1
+  string git_commit = 7;   // e.g. "abc1234"
+  string os = 1;
+  string keyboard_layout = 2;
+  WindowSpecs window_specs = 3;
+  repeated ScreenSpecs screen_specs = 4;
+}
+
+message ScreenSpecs {
+  int32 width = 1;  // e.g. "1920"
+  int32 height = 2; // e.g. "1080"
+  double scale = 3; // e.g. "100%"
+  int32 dpi = 4;    // e.g. "96"
+  int64 id = 5;     // ID of the screen
+}
+
+message WindowSpecs {
+  int32 width = 1;     // e.g. "1920"
+  int32 height = 2;    // e.g. "1080"
+  double scale = 3;    // e.g. "100%"
+  int32 dpi = 4;       // e.g. "96"
+  string title = 5;    // e.g. "Minecraft"
+  int64 screen_id = 6; // ID of the screen the window is on
+}
+
+message VideoAnnotationMetadata {
+  string id = 1;             // UUID4 of this sample
+  int64 timestamp = 2;       // Unix timestamp in milliseconds
+  float frames_per_second =
+      5; // Number of frames per second in the video (20 is standard).
+
+  // specs of the capture device used to record the video
+  CaptureDeviceSpecs capture_device_specs = 10;
+
+  // consolidated video quality information.
+  VideoQualityInfo video_quality_info = 11;
+
+  VideoSourceInfo video_source_info = 9;
+
+  // Flexible key-value pairs for user-defined metadata
+  map<string, string> custom_metadata = 12;
+
+  // DEPRECATED: Old fixed user-editable fields (kept for backward compatibility)
+  string user = 3 [deprecated = true];
+  repeated string tasks = 4 [deprecated = true];
+  VideoAnnotationEnv env = 6 [deprecated = true];
+  string group_name = 7 [deprecated = true];
+  string golden_example_path = 8 [deprecated = true];
+}
+
+// message for quality-related information
+message VideoQualityInfo {
+  // indicates whether the video contains a facecam
+  bool has_facecam = 1;
+
+  // Aspect ratio of the video, specified as a ratio. For example, 16:9 would
+  // have: numerator = 16, denominator = 9.
+  VideoAspectRatio aspect_ratio = 2;
+}
+
+message VideoAspectRatio {
+  int32 numerator = 1;
+  int32 denominator = 2;
+}
+
+message VideoSourceInfo {
+  Source source = 1;
+  string video_filter_info = 2;
+}
+
+message Source {
+  oneof source_type {
+    YoutubeSource youtube_source = 1;
+    OAISource oai_source = 2;
+    TwitchSource twitch_source = 3;
+  }
+}
+
+message YoutubeSource {
+  string video_id = 1;
+  string query = 2;
+}
+
+message TwitchSource {
+  string video_id = 1;
+  string game = 2;
+  string env_subtype = 3;
+}
+
+message OAISource {
+  string video_url = 1;
+  string action_url = 2;
+}
+
+message MouseAction {
+  shared.Vec2Int mouse_absolute_px = 1; // absolute mouse position in pixels
+  shared.Vec2Float mouse_relative =
+      2; // mouse relative position in fraction of window size
+  shared.Vec2Int mouse_delta_px = 3;  // mouse delta change in pixels
+  shared.Vec2Int scroll_delta_px = 4; // scroll delta in pixels
+  repeated string buttons_down = 9;
+}
+
+message DeprecatedMouseAction {
+  double x = 1;
+  double y = 2;
+  double dx = 3;
+  double dy = 4;
+  repeated int32 buttons = 5;
+  repeated int32 new_buttons = 6;
+}
+
+message KeyboardAction { repeated string keys = 1; }
+
+message GamePadButtons {
+  bool south = 1;
+  bool north = 2;
+  bool east = 3;
+  bool west = 4;
+  bool dpad_up = 5;
+  bool dpad_down = 6;
+  bool dpad_left = 7;
+  bool dpad_right = 8;
+  bool start = 9;
+  bool select = 10;
+  bool left_bumper = 11;
+  bool right_bumper = 12;
+}
+
+message Stick {
+  // must be between -1 and 1 with -1 being fully left and 1 being fully right
+  float x = 1;
+  // must be between -1 and 1 with 1 being fully up and -1 being fully down
+  float y = 2;
+  bool pressed = 3;
+}
+
+message GamePadAction {
+  GamePadButtons buttons = 1;
+  Stick left_stick = 2;
+  Stick right_stick = 3;
+  // must be between 0 and 1 with 0 being fully released and 1 being fully
+  // pressed
+  float left_trigger = 4;
+  // must be between 0 and 1 with 0 being fully released and 1 being fully
+  // pressed
+  float right_trigger = 5;
+}
+
+message LowLevelAction {
+  DeprecatedMouseAction mouse_deprecated = 1;
+  KeyboardAction keyboard = 2;
+  bool is_known = 3;
+  MouseAction mouse = 4;
+  GamePadAction game_pad = 5;
+}
+
+message MinecraftState {
+  double xpos = 1;
+  double ypos = 2;
+  double zpos = 3;
+  double yaw = 4;
+  double pitch = 5;
+  int64 milli = 6;
+  int64 serverTick = 7;
+}
+
+message TwoDBlockChaseState {
+  int32 agent_pos_x = 1;
+  int32 agent_pos_y = 2;
+  int32 goal_pos_x = 3;
+  int32 goal_pos_y = 4;
+}
+
+message MiniWorldAgentState {
+  double agent_pos_x = 1;
+  double agent_pos_z = 2;
+  double agent_dir_x = 5;
+  double agent_dir_z = 6;
+  double camera_dir_x = 7;
+  double camera_dir_z = 8;
+  int64 health = 9;
+  double reward = 10;
+}
+
+message MiniWorldEnvState {
+  double goal_pos_x = 1;
+  double goal_pos_z = 2;
+}
+
+message MiniWorldState {
+  MiniWorldAgentState miniworld_agent_state = 1;
+  repeated MiniWorldEnvState miniworld_env_state = 2;
+}
+
+message MouseButtonEvent {
+  string button = 1; // e.g. "left", "right", "middle"
+  bool pressed = 2;  // true if the button is pressed, false if released
+}
+
+message KeyboardEvent {
+  string key = 1;   // e.g. "a", "b", "c", "Enter"
+  bool pressed = 2; // true if the key is pressed, false if released
+}
+
+message GamePadButtonEvent {
+  string button = 1; // e.g. "south", "north", "east", "west"
+  bool pressed = 2;  // true if the button is pressed, false if released
+}
+
+message GamePadAxisEvent {
+  string axis = 1; // e.g. "left_stick_x", "left_stick_y"
+  float value = 2; // value of the axis, between -1 and 1
+}
+
+message GamePadTriggerEvent {
+  string trigger = 1; // e.g. "left_trigger", "right_trigger"
+  float value = 2;    // value of the trigger, between 0 and 1
+}
+
+message InputEvent {
+  oneof event {
+    MouseButtonEvent mouse_event = 1;
+    KeyboardEvent keyboard_event = 2;
+    shared.Vec2Int mouse_move_event = 3;
+    shared.Vec2Int wheel_event = 4;
+    shared.Vec2Int mouse_delta_event = 5;
+    GamePadButtonEvent game_pad_button_event = 7;
+    GamePadAxisEvent game_pad_axis_event = 8;
+    GamePadTriggerEvent game_pad_trigger_event = 9;
+  }
+  uint64 time = 6;     // Time in nanoseconds since start of recording
+  bool simulated = 10; // Whether the event is simulated
+}
+
+message FrameAnnotation {
+  LowLevelAction user_action = 1;
+  LowLevelAction system_action = 6;
+  oneof env_state {
+    MinecraftState minecraft_state = 2;
+    TwoDBlockChaseState block_chase_state = 3;
+    MiniWorldState miniworld_state = 4;
+  }
+  // ActionTask is deprecated
+  ActionTask action_task = 5;
+  repeated FrameTextAnnotation frame_text_annotation = 7;
+  uint64 frame_time = 8; // Frame time in nanoseconds since start of recording
+  repeated InputEvent input_events = 9; // List of input events for this frame
+}
+
+message FrameTextAnnotation {
+  string instruction = 1;
+  FrameTextAnnotator frame_text_annotator = 2;
+  float duration = 3; // duration in seconds for the annotation
+  map<string, TokenizerEmbeddingMap> text_embedding_dict = 4;
+}
+
+message TokenizerEmbeddingMap {
+  map<string, FloatTensor> text_embeddings = 1;
+}
+
+message FloatTensor {
+  // The shape of the tensor (e.g., [num_of_token, D] -> [1, 768])
+  repeated int64 shape = 1;
+  
+  // The flattened tensor data (num_of_tokens x D values)
+  repeated float values = 2;
+}
+
+message FrameTextAnnotator {
+  string provider = 1;
+  string version = 2;
+}
+
+message ActionTask {
+  string lower_level_task = 1;
+  string higher_level_task = 2;
+}
+
+message Point3D {
+  double x = 1;
+  double y = 2;
+  double z = 3;
+}
+
+// Keep track of any changes made to this proto.
+message Changelog {
+  string change_id = 1;
+  string change_description = 2;
+  int64 timestamp =
+      3; // Unix timestamp in seconds since epoch (use datetime.fromtimestamp()
+         // in Python or new Date(timestamp * 1000) in JS to convert)
+}
+
+message VoiceEvent {
+  uint64 time = 1;  // Time in nanoseconds since start of recording
+  bool speaking = 2; // True if the user started speaking, false if stopped
+}
+
+message VideoAnnotation {
+  VideoAnnotationMetadata metadata = 2;
+  repeated FrameAnnotation frame_annotations = 3;
+  TaskSpecificInfo task_specific_info = 4;
+  VideoGlobalTask video_global_task = 5;
+  VideoFrameAnnotationMetadata video_frame_annotation_metadata = 7;
+  // Version 1: creation of version and metadata on video
+  // Version 2: added reworked mouse
+  // Version 3: after mouse acceleration fixes
+  int32 version = 6; // Version of the video annotation format
+
+  repeated Changelog changelog = 8;
+  repeated VoiceEvent voice_events = 9;
+}
+
+message VideoGlobalTask { string video_narrative = 1; }
+message VideoFrameAnnotationMetadata { string video_narrative = 1; }
+
+message TaskSpecificInfo {
+  oneof task_info { PathfindingTaskSpecificInfo pathfinding_info = 1; }
+}
+
+message PathfindingTaskSpecificInfo {
+  repeated Point3D pathfinding_trajectory = 1;
+}

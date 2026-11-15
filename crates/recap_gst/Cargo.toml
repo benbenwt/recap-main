@@ -1,0 +1,25 @@
+[package]
+name = "recap_gst"
+version = "0.1.0"
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+gst = { workspace = true, features = ["serde"] }
+gst_app = { workspace = true }
+gst_video = { workspace = true }
+gst_pbutils = { workspace = true, features = ["serde"] }
+anyhow = { workspace = true }
+serde = { workspace = true }
+window-handling.workspace = true
+derive_more = { workspace = true, features = ["debug"] }
+tracing.workspace = true
+rand.workspace = true
+
+[features]
+dot_graph = []
+
+[lints]
+workspace = true

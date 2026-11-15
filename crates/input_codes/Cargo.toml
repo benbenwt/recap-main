@@ -1,0 +1,27 @@
+[package]
+name = "input_codes"
+version = "0.1.0"
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[features]
+default = ["serde", "rdev", "device_query", "strum", "winit"]
+serde = ["dep:serde"]
+rdev = ["dep:rdev"]
+device_query = ["dep:device_query"]
+strum = ["dep:strum"]
+winit = ["dep:winit"]
+
+[dependencies]
+derive_more = { workspace = true, features = ["display"] }
+device_query = { optional = true, workspace = true }
+rdev = { optional = true, workspace = true }
+serde = { optional = true, workspace = true }
+strum = { optional = true, workspace = true }
+winit = { optional = true, workspace = true }
+
+
+[lints]
+workspace = true

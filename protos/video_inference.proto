@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package elefant.training_data.video_inference;
+
+import "shared.proto";
+
+// Raw video frame.
+message Frame {
+  int32 width = 1;
+  int32 height = 2;
+  // raw bytes is rgb24 format.
+  bytes data = 3;
+  int32 id = 4;
+}
+
+message MouseAction {
+  oneof mouse_change {
+    // mouse delta change in pixels
+    shared.Vec2Int mouse_delta_px = 1;
+    // mouse relative position in fraction of window size
+    shared.Vec2Float mouse_pos = 2;
+  }
+  shared.Vec2Int scroll_delta_px = 3; // scroll delta in pixels
+  repeated string buttons_down = 4;
+}
+
+// Action is a message that contains actions the model outputs
+message Action {
+  repeated string keys = 1;
+  int32 id = 2;
+  MouseAction mouse_action = 3;
+}
+
+service VideoInference {
+  rpc InferVideo(stream Frame) returns (stream Action) {}
+}

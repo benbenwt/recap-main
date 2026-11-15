@@ -1,0 +1,22 @@
+[package]
+name = "video_annotation_proto"
+version = "0.1.0"
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[features]
+default = []
+serialize = ["serde"]
+
+[dependencies]
+prost.workspace = true
+serde = { workspace = true, optional = true }
+glam.workspace = true
+
+[build-dependencies]
+prost-build.workspace = true
+
+[lints]
+workspace = true
